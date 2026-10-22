@@ -1,0 +1,103 @@
+# Data sources registry. Synced into the `sources` table on every run.
+#
+# A source used for forecasts or market bars must have `terms_checked_at`
+# set (YYYY-MM-DD). The manual loaders refuse files from a source whose
+# terms have not been checked. This is how "verify permitted usage first"
+# is enforced in code rather than remembered.
+#
+# redistribution_allowed: true / false / null (null = not yet verified)
+
+sources:
+  - source_id: FRED
+    name: Federal Reserve Economic Data (St. Louis Fed)
+    source_tier: official
+    collection_method: api
+    url: https://fred.stlouisfed.org/docs/api/fred/
+    usage_terms: https://fred.stlouisfed.org/docs/api/terms_of_use.html ; some series carry third-party restrictions (e.g. ICE BofA, S&P)
+    redistribution_allowed: null
+    terms_checked_at: null
+    notes: API rate limit 120 requests/minute (FRED API errors page)
+
+  - source_id: BLS
+    name: U.S. Bureau of Labor Statistics
+    source_tier: official
+    collection_method: reference_only
+    url: https://www.bls.gov
+    redistribution_allowed: null
+    terms_checked_at: null
+    notes: Publisher of CPI, PPI, Employment Situation, JOLTS. Retrieved via FRED.
+
+  - source_id: BEA
+    name: U.S. Bureau of Economic Analysis
+    source_tier: official
+    collection_method: reference_only
+    url: https://www.bea.gov
+    redistribution_allowed: null
+    terms_checked_at: null
+    notes: Publisher of GDP and PCE. Retrieved via FRED.
+
+  - source_id: CENSUS
+    name: U.S. Census Bureau
+    source_tier: official
+    collection_method: reference_only
+    url: https://www.census.gov
+    redistribution_allowed: null
+    terms_checked_at: null
+    notes: Publisher of retail sales. Retrieved via FRED.
+
+  - source_id: FED_BOARD
+    name: Board of Governors of the Federal Reserve System
+    source_tier: official
+    collection_method: manual_entry
+    url: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+    redistribution_allowed: null
+    terms_checked_at: null
+    notes: FOMC meeting dates and decisions entered manually from federalreserve.gov.
+
+  - source_id: DOL
+    name: U.S. Department of Labor
+    source_tier: official
+    collection_method: reference_only
+    url: https://www.dol.gov
+    redistribution_allowed: null
+    terms_checked_at: null
+    notes: Publisher of jobless claims. Retrieved via FRED.
+
+  - source_id: CHICAGO_FED
+    name: Federal Reserve Bank of Chicago
+    source_tier: official
+    collection_method: reference_only
+    url: https://www.chicagofed.org/research/data/nfci/current-data
+    redistribution_allowed: null
+    terms_checked_at: null
+    notes: Publisher of NFCI. Retrieved via FRED.
+
+  - source_id: ISM
+    name: Institute for Supply Management
+    source_tier: publisher
+    collection_method: manual_entry
+    url: https://www.ismworld.org
+    usage_terms: No creation/redistribution/incorporation of PMI content without prior written authorization from ISM.
+    redistribution_allowed: false
+    terms_checked_at: "2026-10-10"
+    notes: Local gitignored CSV only (data/manual/ism.csv). Never commit values.
+
+# ---------------------------------------------------------------------
+# NOT YET REGISTERED (add only after verifying coverage and terms):
+#
+#  - source_id: <CONSENSUS_PROVIDER_ID>
+#    name: <provider name>
+#    source_tier: third_party
+#    collection_method: manual_entry
+#    url: <url>
+#    usage_terms: <summary + link>
+#    redistribution_allowed: <true|false>
+#    terms_checked_at: "<YYYY-MM-DD>"
+#    notes: Historical coverage verified back to <YYYY-MM> for CPI and NFP.
+#
+#  - source_id: <GOLD_DATA_VENDOR_ID>
+#    name: <vendor / broker export>
+#    source_tier: third_party
+#    collection_method: file_import
+#    ...same fields...
+# ---------------------------------------------------------------------

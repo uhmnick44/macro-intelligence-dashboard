@@ -1,0 +1,18 @@
+# Who must approve a manual override before the figure counts as verified.
+#
+# Versioning: any change requires a new `version`. The pipeline stores a
+# SHA-256 of this file per version and refuses to run if the content
+# changed but the version did not. Every activation is recorded, so you can
+# always see which policy was in force when a figure was verified.
+#
+# require_independent_approval
+#   false  (MVP) the person who made the decision may approve it. Such
+#          figures are verified but labelled self_approved everywhere,
+#          including in surprise calculations.
+#   true   a self-approved override stays UNVERIFIED until someone other
+#          than decided_by adds an 'approve' row in overrides.csv.
+#          Nothing else needs to change: existing decisions and approvals
+#          are kept and simply re-evaluated.
+
+version: ap-1
+require_independent_approval: false

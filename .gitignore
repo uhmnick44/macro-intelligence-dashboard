@@ -7,9 +7,15 @@ secrets.yaml
 .streamlit/secrets.toml
 
 # --- Licensed / manual data (ISM, consensus forecasts, third-party bars) ---
-data/
+# Everything under data/ stays local, EXCEPT the header-only CSV templates
+# in data/manual/templates/ (column names only, no data).
+data/*
+!data/manual/
+data/manual/*
+!data/manual/templates/
 *.csv
 !tests/fixtures/**/*.csv
+!data/manual/templates/*.csv
 
 # --- Raw snapshots and local database ---
 raw/
