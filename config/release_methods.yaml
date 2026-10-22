@@ -1,0 +1,45 @@
+# How each release figure is COMPUTED from first-release vintages, so it
+# can be cross-checked against the manually entered published figure.
+#
+# Versioning: any change to this file requires a new `version`. The
+# pipeline stores a SHA-256 of this file per version and refuses to run if
+# the content changed but the version did not. Old computed values stay in
+# the database under their old version.
+#
+# formula       level       value of the reference period
+#               difference  value(t) - value(t - lag)
+#               pct_change  (value(t) / value(t - lag) - 1) * 100
+# input         indicator whose vintages are used; must be pull: vintage_history
+# lag_months    1 for month-over-month, 12 for year-over-year
+#
+# All inputs are read AS OF the release date (America/New_York): only data
+# that existed when the figure was published is used.
+
+version: rm-1
+
+methods:
+  # ---------------- CPI report ----------------
+  - {indicator_id: cpi_headline, measure: mom_pct, formula: pct_change,
+     input: cpi_headline, lag_months: 1}
+  # BLS reports the 12-month CPI change before seasonal adjustment, so
+  # the year-over-year figure is computed from the NSA index.
+  - {indicator_id: cpi_headline, measure: yoy_pct, formula: pct_change,
+     input: cpi_headline_nsa, lag_months: 12}
+  - {indicator_id: cpi_core, measure: mom_pct, formula: pct_change,
+     input: cpi_core, lag_months: 1}
+  - {indicator_id: cpi_core, measure: yoy_pct, formula: pct_change,
+     input: cpi_core_nsa, lag_months: 12}
+
+  # ---------------- Employment Situation ----------------
+  - {indicator_id: payrolls, measure: change, formula: difference,
+     input: payrolls, lag_months: 1}
+  - {indicator_id: unemployment_rate, measure: rate_pct, formula: level,
+     input: unemployment_rate, lag_months: 0}
+  - {indicator_id: avg_hourly_earnings, measure: mom_pct, formula: pct_change,
+     input: avg_hourly_earnings, lag_months: 1}
+  # ASSUMPTION (unverified): BLS computes the 12-month AHE change from the
+  # seasonally adjusted series. If validation shows systematic
+  # discrepancies, that is evidence against this assumption: change it in
+  # a new version, do not edit this one.
+  - {indicator_id: avg_hourly_earnings, measure: yoy_pct, formula: pct_change,
+     input: avg_hourly_earnings, lag_months: 12}

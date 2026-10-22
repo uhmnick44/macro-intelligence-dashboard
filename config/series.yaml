@@ -1,0 +1,161 @@
+# Indicator and asset registry. Source of truth for the `indicators` and
+# `assets` tables (synced on every run).
+#
+# Fields
+#   pillar       growth | inflation | labor | financial | none
+#   polarity     +1 = a rise pushes the pillar "up" (growth accelerating,
+#                inflation heating, labor strengthening, conditions tightening)
+#                -1 = a rise pushes it "down"; 0 = no direction (display only)
+#   regime_role  input | context | display
+#                PROVISIONAL. Final inputs and weights are decided in Phase 7.
+#   pull         latest           = FRED default real-time period (today)
+#                vintage_history  = full ALFRED real-time history from
+#                                   realtime_start (true vintages)
+#   verify       true = series ID not yet confirmed; the run checks FRED
+#                metadata and reports any mismatch
+#
+# seasonal_adjustment is compared with FRED's seasonal_adjustment_short and
+# frequency with frequency_short on every run; mismatches are reported, not
+# silently accepted.
+
+defaults:
+  # 24 months of releases (Oct 2024 - Sep 2026) need vintages from a few
+  # months earlier so window-boundary clipping cannot touch them.
+  vintage_realtime_start: "2024-06-01"
+  # Observation history for vintage pulls: 12+ months before the release
+  # window so YoY changes can be computed as-published.
+  vintage_observation_start: "2023-01-01"
+
+indicators:
+  # ---------------- Growth ----------------
+  - {indicator_id: gdp_real, name: Real GDP, pillar: growth, source_id: FRED, source_series_id: GDPC1,
+     publisher: BEA, frequency: quarterly, units: "Billions of chained dollars, SAAR",
+     seasonal_adjustment: SAAR, polarity: 1, regime_role: input, pull: latest}
+  - {indicator_id: gdp_growth, name: Real GDP growth (annualized q/q), pillar: growth, source_id: FRED,
+     source_series_id: A191RL1Q225SBEA, publisher: BEA, frequency: quarterly, units: "Percent change, annualized",
+     seasonal_adjustment: SAAR, polarity: 1, regime_role: display, pull: latest,
+     limitations: "Derived from GDPC1; display only so GDP is not counted twice"}
+  - {indicator_id: ism_manufacturing, name: ISM Manufacturing PMI, pillar: growth, source_id: ISM,
+     source_series_id: null, publisher: ISM, frequency: monthly, units: Diffusion index,
+     seasonal_adjustment: SA, polarity: 1, regime_role: input, pull: manual,
+     limitations: "Manual entry; not redistributable; gitignored"}
+  - {indicator_id: ism_services, name: ISM Services PMI, pillar: growth, source_id: ISM,
+     source_series_id: null, publisher: ISM, frequency: monthly, units: Diffusion index,
+     seasonal_adjustment: SA, polarity: 1, regime_role: input, pull: manual,
+     limitations: "Manual entry; not redistributable; gitignored"}
+  - {indicator_id: retail_sales, name: Retail sales (nominal), pillar: growth, source_id: FRED,
+     source_series_id: RSAFS, publisher: CENSUS, frequency: monthly, units: Millions of dollars,
+     seasonal_adjustment: SA, polarity: 1, regime_role: context, pull: latest,
+     limitations: "Nominal; not a real-growth signal on its own"}
+  - {indicator_id: industrial_production, name: Industrial production, pillar: growth, source_id: FRED,
+     source_series_id: INDPRO, publisher: FED_BOARD, frequency: monthly, units: Index,
+     seasonal_adjustment: SA, polarity: 1, regime_role: input, pull: latest}
+  - {indicator_id: real_pce, name: Real personal consumption expenditures, pillar: growth, source_id: FRED,
+     source_series_id: PCEC96, publisher: BEA, frequency: monthly, units: "Billions of chained dollars, SAAR",
+     seasonal_adjustment: SAAR, polarity: 1, regime_role: input, pull: latest}
+
+  # ---------------- Inflation ----------------
+  - {indicator_id: cpi_headline, name: CPI (all items), pillar: inflation, source_id: FRED,
+     source_series_id: CPIAUCSL, publisher: BLS, frequency: monthly, units: Index 1982-1984=100,
+     seasonal_adjustment: SA, polarity: 1, regime_role: context, pull: vintage_history}
+  - {indicator_id: cpi_core, name: Core CPI, pillar: inflation, source_id: FRED,
+     source_series_id: CPILFESL, publisher: BLS, frequency: monthly, units: Index 1982-1984=100,
+     seasonal_adjustment: SA, polarity: 1, regime_role: input, pull: vintage_history}
+  # NSA indexes: used only to compute the published 12-month CPI changes
+  # (BLS reports those before seasonal adjustment). Display only.
+  - {indicator_id: cpi_headline_nsa, name: CPI (all items, NSA), pillar: inflation, source_id: FRED,
+     source_series_id: CPIAUCNS, publisher: BLS, frequency: monthly, units: Index 1982-1984=100,
+     seasonal_adjustment: NSA, polarity: 1, regime_role: display, pull: vintage_history}
+  - {indicator_id: cpi_core_nsa, name: Core CPI (NSA), pillar: inflation, source_id: FRED,
+     source_series_id: CPILFENS, publisher: BLS, frequency: monthly, units: Index 1982-1984=100,
+     seasonal_adjustment: NSA, polarity: 1, regime_role: display, pull: vintage_history, verify: true}
+  - {indicator_id: pce_headline, name: PCE price index, pillar: inflation, source_id: FRED,
+     source_series_id: PCEPI, publisher: BEA, frequency: monthly, units: Index 2017=100,
+     seasonal_adjustment: SA, polarity: 1, regime_role: context, pull: latest}
+  - {indicator_id: pce_core, name: Core PCE price index, pillar: inflation, source_id: FRED,
+     source_series_id: PCEPILFE, publisher: BEA, frequency: monthly, units: Index 2017=100,
+     seasonal_adjustment: SA, polarity: 1, regime_role: input, pull: latest}
+  - {indicator_id: ppi_final_demand, name: PPI final demand, pillar: inflation, source_id: FRED,
+     source_series_id: PPIFIS, publisher: BLS, frequency: monthly, units: Index,
+     seasonal_adjustment: SA, polarity: 1, regime_role: input, pull: latest, verify: true}
+
+  # ---------------- Labor ----------------
+  - {indicator_id: payrolls, name: Nonfarm payrolls (level), pillar: labor, source_id: FRED,
+     source_series_id: PAYEMS, publisher: BLS, frequency: monthly, units: Thousands of persons,
+     seasonal_adjustment: SA, polarity: 1, regime_role: input, pull: vintage_history,
+     limitations: "Headline is the monthly change, computed in Phase 5 from same-vintage levels"}
+  - {indicator_id: unemployment_rate, name: Unemployment rate, pillar: labor, source_id: FRED,
+     source_series_id: UNRATE, publisher: BLS, frequency: monthly, units: Percent,
+     seasonal_adjustment: SA, polarity: -1, regime_role: input, pull: vintage_history}
+  - {indicator_id: avg_hourly_earnings, name: Average hourly earnings (private), pillar: labor, source_id: FRED,
+     source_series_id: CES0500000003, publisher: BLS, frequency: monthly, units: Dollars per hour,
+     seasonal_adjustment: SA, polarity: 1, regime_role: input, pull: vintage_history,
+     limitations: "Counted in Labor only; shown as context in Inflation"}
+  - {indicator_id: initial_claims, name: Initial jobless claims, pillar: labor, source_id: FRED,
+     source_series_id: ICSA, publisher: DOL, frequency: weekly, units: Number,
+     seasonal_adjustment: SA, polarity: -1, regime_role: input, pull: latest}
+  - {indicator_id: continuing_claims, name: Continuing claims, pillar: labor, source_id: FRED,
+     source_series_id: CCSA, publisher: DOL, frequency: weekly, units: Number,
+     seasonal_adjustment: SA, polarity: -1, regime_role: context, pull: latest}
+  - {indicator_id: jolts_openings, name: JOLTS job openings, pillar: labor, source_id: FRED,
+     source_series_id: JTSJOL, publisher: BLS, frequency: monthly, units: Level in thousands,
+     seasonal_adjustment: SA, polarity: 1, regime_role: input, pull: latest}
+
+  # ---------------- Financial conditions / policy ----------------
+  - {indicator_id: fed_target_upper, name: Fed funds target range (upper), pillar: financial, source_id: FRED,
+     source_series_id: DFEDTARU, publisher: FED_BOARD, frequency: daily, units: Percent,
+     seasonal_adjustment: NSA, polarity: 0, regime_role: display, pull: latest}
+  - {indicator_id: fed_target_lower, name: Fed funds target range (lower), pillar: financial, source_id: FRED,
+     source_series_id: DFEDTARL, publisher: FED_BOARD, frequency: daily, units: Percent,
+     seasonal_adjustment: NSA, polarity: 0, regime_role: display, pull: latest}
+  - {indicator_id: effr, name: Effective federal funds rate, pillar: financial, source_id: FRED,
+     source_series_id: DFF, publisher: FED_BOARD, frequency: daily, units: Percent,
+     seasonal_adjustment: NSA, polarity: 0, regime_role: display, pull: latest}
+  - {indicator_id: ust_2y, name: 2-year Treasury yield, pillar: financial, source_id: FRED,
+     source_series_id: DGS2, publisher: FED_BOARD, frequency: daily, units: Percent,
+     seasonal_adjustment: NSA, polarity: 1, regime_role: context, pull: latest}
+  - {indicator_id: ust_10y, name: 10-year Treasury yield, pillar: financial, source_id: FRED,
+     source_series_id: DGS10, publisher: FED_BOARD, frequency: daily, units: Percent,
+     seasonal_adjustment: NSA, polarity: 1, regime_role: context, pull: latest}
+  - {indicator_id: spread_2s10s, name: 10Y minus 2Y Treasury spread, pillar: financial, source_id: FRED,
+     source_series_id: T10Y2Y, publisher: FED_BOARD, frequency: daily, units: Percentage points,
+     seasonal_adjustment: NSA, polarity: 0, regime_role: display, pull: latest}
+  - {indicator_id: usd_broad, name: Nominal broad U.S. dollar index, pillar: financial, source_id: FRED,
+     source_series_id: DTWEXBGS, publisher: FED_BOARD, frequency: daily, units: Index,
+     seasonal_adjustment: NSA, polarity: 1, regime_role: context, pull: latest}
+  - {indicator_id: nfci, name: Chicago Fed National Financial Conditions Index, pillar: financial,
+     source_id: FRED, source_series_id: NFCI, publisher: CHICAGO_FED, frequency: weekly, units: Index,
+     seasonal_adjustment: NSA, polarity: 1, regime_role: input, pull: latest,
+     limitations: "Positive values = tighter than average (Chicago Fed convention; confirm in Phase 7)"}
+  - {indicator_id: hy_oas, name: ICE BofA US high yield OAS, pillar: financial, source_id: FRED,
+     source_series_id: BAMLH0A0HYM2, publisher: ICE, frequency: daily, units: Percent,
+     seasonal_adjustment: NSA, polarity: 1, regime_role: context, pull: latest,
+     limitations: "FRED distributes a rolling 3-year window only (since Apr 2026)"}
+  - {indicator_id: fed_balance_sheet, name: Fed total assets, pillar: financial, source_id: FRED,
+     source_series_id: WALCL, publisher: FED_BOARD, frequency: weekly, units: Millions of dollars,
+     seasonal_adjustment: NSA, polarity: -1, regime_role: display, pull: latest}
+
+  # ---------------- Markets (daily context) ----------------
+  - {indicator_id: sp500, name: S&P 500, pillar: none, source_id: FRED, source_series_id: SP500,
+     publisher: S&P Dow Jones Indices, frequency: daily, units: Index, seasonal_adjustment: NSA,
+     polarity: 0, regime_role: display, pull: latest,
+     limitations: "FRED carries 10 years of daily history"}
+  - {indicator_id: nasdaq100, name: Nasdaq-100, pillar: none, source_id: FRED, source_series_id: NASDAQ100,
+     publisher: Nasdaq, frequency: daily, units: Index, seasonal_adjustment: NSA,
+     polarity: 0, regime_role: display, pull: latest, verify: true}
+  - {indicator_id: vix, name: CBOE Volatility Index, pillar: none, source_id: FRED, source_series_id: VIXCLS,
+     publisher: CBOE, frequency: daily, units: Index, seasonal_adjustment: NSA,
+     polarity: 0, regime_role: display, pull: latest}
+
+# Not included yet:
+#   ADP employment: FRED series ID unverified; context-only, deferred.
+
+assets:
+  - {asset_id: SPX,       name: S&P 500,               asset_class: equity_index, quote_type: index_level, indicator_id: sp500}
+  - {asset_id: NDX,       name: Nasdaq-100,            asset_class: equity_index, quote_type: index_level, indicator_id: nasdaq100}
+  - {asset_id: VIX,       name: VIX,                   asset_class: volatility,   quote_type: index_level, indicator_id: vix}
+  - {asset_id: UST2Y,     name: 2Y Treasury yield,     asset_class: rates,        quote_type: yield_pct,   indicator_id: ust_2y}
+  - {asset_id: UST10Y,    name: 10Y Treasury yield,    asset_class: rates,        quote_type: yield_pct,   indicator_id: ust_10y}
+  - {asset_id: USD_BROAD, name: Broad dollar index,    asset_class: fx,           quote_type: index_level, indicator_id: usd_broad}
+  - {asset_id: GOLD,      name: Gold (non-primary source), asset_class: commodity, quote_type: price,      indicator_id: null,
+     notes: "Daily bars from a third-party vendor via data/manual/market_bars/; source labeled on every row"}
